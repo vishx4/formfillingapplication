@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Email Logs</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .email-body { max-height: 100px; overflow-y: auto; display: block; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>Email Logs</h1>
+    <nav>
+        <a href="{{ url_for('main.index') }}">Home</a> |
+        <a href="{{ url_for('main.trigger_compliance_job_route') }}">Trigger Job Manually</a>
+    </nav>
+
+    {% if email_logs and email_logs|length > 0 %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Log ID</th>
+                    <th>Timestamp</th>
+                    <th>Recipient Email</th>
+                    <th>Employee ID</th>
+                    <th>Subject</th>
+                    <th>Body (Preview)</th>
+                    <th>Status</th>
+                    <th>Compliance Req. ID</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in email_logs | sort(attribute='timestamp', reverse=true) %}
+                <tr>
+                    <td>{{ log.id }}</td>
+                    <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') if log.timestamp else 'N/A' }}</td>
+                    <td>{{ log.recipient_email }}</td>
+                    <td>{{ log.employee_id if log.employee_id else 'N/A' }}</td>
+                    <td>{{ log.subject }}</td>
+                    <td><pre class="email-body">{{ log.body | truncate(150, true) }}</pre></td>
+                    <td>{{ log.status.value if log.status else 'N/A' }}</td>
+                    <td>{{ log.compliance_request_id if log.compliance_request_id else 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No email logs found. Run the <a href="{{ url_for('main.trigger_compliance_job_route') }}">compliance job</a> to generate requests and email logs.</p>
+    {% endif %}
+</body>
+</html>

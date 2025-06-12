@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Form Template - {{ template.name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Edit Form Template: {{ template.name }} (v{{ template.version }})</h1>
+    <nav>
+        <a href="{{ url_for('main.index') }}">Home</a> |
+        <a href="{{ url_for('main.list_templates') }}">Back to Templates List</a>
+    </nav>
+
+    <h2>Template Details</h2>
+    <p><strong>Name:</strong> {{ template.name }}</p>
+    <p><strong>Status:</strong> {{ template.status.value }}</p>
+    <p><strong>Static Content:</strong></p>
+    <pre>{{ template.static_content }}</pre>
+    <p><strong>Appendix Content:</strong></p>
+    <pre>{{ template.appendix_content }}</pre>
+
+    <hr>
+
+    <h2>Questions</h2>
+    {% if questions %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Order</th>
+                    <th>Text</th>
+                    <th>Type</th>
+                    <th>Options</th>
+                    <th>Mandatory</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for q in questions | sort(attribute='order') %}
+                <tr>
+                    <td>{{ q.order }}</td>
+                    <td>{{ q.text }}</td>
+                    <td>{{ q.question_type.value }}</td>
+                    <td>{{ q.options | join(', ') if q.options else 'N/A' }}</td>
+                    <td>{{ 'Yes' if q.is_mandatory else 'No' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No questions have been added to this template yet.</p>
+    {% endif %}
+
+    <hr>
+
+    {% if template.status == 'DRAFT' or template.status.value == 'DRAFT' %} {# Check both direct enum and .value #}
+    <h2>Add New Question</h2>
+    <form method="POST" action="{{ url_for('main.edit_template', template_id=template.id) }}">
+        <div>
+            <label for="question_text">Question Text:</label><br>
+            <textarea id="question_text" name="question_text" rows="3" cols="50" required></textarea>
+        </div>
+        <div>
+            <label for="question_type">Question Type:</label><br>
+            <select id="question_type" name="question_type">
+                {% for qt in question_types %} {# Passed from the route, e.g., ['TEXT_INPUT', 'RADIO'] #}
+                    <option value="{{ qt }}">{{ qt.replace('_', ' ') | title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div id="options_field" style="display:none;"> {# Hidden by default #}
+            <label for="options">Options (comma-separated):</label><br>
+            <input type="text" id="options" name="options" size="50">
+        </div>
+        <div>
+            <br>
+            <input type="submit" value="Add Question">
+        </div>
+    </form>
+
+    <script>
+        document.getElementById('question_type').addEventListener('change', function() {
+            var optionsField = document.getElementById('options_field');
+            var optionInput = optionsField.querySelector('input'); // Get the input field itself
+            var showForTypes = ['RADIO', 'CHECKBOX', 'DROPDOWN', 'MULTI_SELECT_COMBO'];
+            if (showForTypes.includes(this.value)) {
+                optionsField.style.display = 'block';
+                optionInput.setAttribute('required', 'required'); // Make options required for these types
+            } else {
+                optionsField.style.display = 'none';
+                optionInput.removeAttribute('required'); // Not required for other types
+                optionInput.value = ''; // Clear options when hiding
+            }
+        });
+        // Trigger change on load to set initial state of options field
+        document.getElementById('question_type').dispatchEvent(new Event('change'));
+    </script>
+    {% else %}
+    <p>This template is not in DRAFT status, so questions cannot be added or modified.</p>
+    {% endif %}
+
+    <hr>
+    <h2>Actions</h2>
+    {% if template.status == FormTemplateStatus.DRAFT or template.status.value == 'DRAFT' %}
+        <form method="POST" action="{{ url_for('main.publish_template', template_id=template.id) }}" style="display: inline;">
+            <input type="submit" value="Publish Template" class="button-primary" onclick="return confirm('Are you sure you want to publish this template? This will archive any existing published template.');">
+        </form>
+    {% else %}
+        <p>This template is not a draft, so it cannot be published directly from here.</p>
+        {% if template.status == FormTemplateStatus.PUBLISHED %}
+        <p>To make changes, first clone this template to create a new draft.</p>
+        {% endif %}
+    {% endif %}
+
+</body>
+</html>

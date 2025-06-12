@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Compliance Requests</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Compliance Requests</h1>
+    <nav>
+        <a href="{{ url_for('main.index') }}">Home</a> |
+        <a href="{{ url_for('main.trigger_compliance_job_route') }}">Trigger Job Manually</a>
+    </nav>
+
+    {% if requests and requests|length > 0 %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Req. ID</th>
+                    <th>Employee ID</th>
+                    <th>Template ID</th>
+                    <th>Client ID</th>
+                    <th>Project ID</th>
+                    <th>Status</th>
+                    <th>Sent Date</th>
+                    <th>Timesheet IDs</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in requests %}
+                <tr>
+                    <td>{{ req.id }}</td>
+                    <td>{{ req.employee_id }}</td>
+                    <td>{{ req.form_template_id }}</td>
+                    <td>{{ req.client_id }}</td>
+                    <td>{{ req.project_id }}</td>
+                    <td>{{ req.status.value if req.status else 'N/A' }}</td>
+                    <td>{{ req.request_sent_date.strftime('%Y-%m-%d %H:%M') if req.request_sent_date else 'N/A' }}</td>
+                    <td>{{ req.timesheet_record_ids | join(', ') if req.timesheet_record_ids else 'None' }}</td>
+                    <td>
+                        <a href="#">View Form</a> {# Placeholder for future functionality #}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No compliance requests found. You might need to run the <a href="{{ url_for('main.trigger_compliance_job_route') }}">trigger job</a>.</p>
+    {% endif %}
+
+    {# Display flashed messages - useful if redirected here after job run #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="flashes" style="list-style-type: none; padding-left: 0; margin-top: 20px;">
+            {% for category, message in messages %}
+                <li class="{{ category }}" style="border: 1px solid #ccc; padding: 10px; margin-bottom: 5px; border-left-width: 5px; border-left-color: {% if category == 'error' %}red{% elif category == 'success' %}green{% elif category == 'warning' %}orange{% else %}blue{% endif %};">
+                    {{ message }}
+                </li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+</body>
+</html>

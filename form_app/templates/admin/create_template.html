@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create New Form Template</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Create New Form Template</h1>
+    <nav>
+        <a href="{{ url_for('main.index') }}">Home</a> |
+        <a href="{{ url_for('main.list_templates') }}">View All Templates</a>
+    </nav>
+
+    {# Display flashed messages #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="flashes">
+            {% for category, message in messages %}
+                <li class="{{ category }}">{{ message }}</li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
+    {% if warning_message %}
+        <div class="warning" style="color: orange; border: 1px solid orange; padding: 10px; margin-bottom:15px;">
+            {{ warning_message }}
+            {% if draft_version %}
+                (Existing Draft Version: {{ draft_version }})
+            {% endif %}
+            <p>Submitting this form will archive the existing draft and create a new one.</p>
+        </div>
+    {% endif %}
+
+    <form method="POST">
+        <div>
+            <label for="name">Template Name:</label><br>
+            <input type="text" id="name" name="name" value="{{ form_data.name if form_data else '' }}" required>
+        </div>
+        <div>
+            <label for="static_content">Static Content:</label><br>
+            <textarea id="static_content" name="static_content" rows="10" cols="50">{{ form_data.static_content if form_data else '' }}</textarea>
+        </div>
+        <div>
+            <label for="appendix_content">Appendix Content:</label><br>
+            <textarea id="appendix_content" name="appendix_content" rows="10" cols="50">{{ form_data.appendix_content if form_data else '' }}</textarea>
+        </div>
+        <div>
+            <input type="submit" value="Save as New Draft">
+        </div>
+    </form>
+</body>
+</html>

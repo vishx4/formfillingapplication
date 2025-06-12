@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fill Compliance Form: {{ form_template.name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .form-stepper { margin-top: 20px; }
+        .step { display: none; padding: 20px; border: 1px solid #eee; }
+        .step.active { display: block; }
+        .step-navigation { margin-top: 15px; }
+        .step-navigation button { padding: 10px 15px; margin-right: 10px; }
+        .question-item { margin-bottom: 20px; padding: 10px; border: 1px solid #f0f0f0; background-color: #fafafa; }
+        .question-item label { display: block; font-weight: bold; margin-bottom: 5px; }
+        .question-item input[type="text"],
+        .question-item textarea,
+        .question-item select { width: 100%; padding: 8px; box-sizing: border-box; margin-top: 5px; }
+        .question-item input[type="radio"],
+        .question-item input[type="checkbox"] { margin-right: 5px; }
+        .options-group label { font-weight: normal; margin-right: 15px; }
+    </style>
+</head>
+<body>
+    <h1>Compliance Form: {{ form_template.name }}</h1>
+    <p><strong>For Client:</strong> {{ client_name }} | <strong>Project ID:</strong> {{ project_id }}</p>
+    <p><strong>Request ID:</strong> {{ compliance_request.id }} | <strong>Status:</strong> {{ compliance_request.status.value }}</p>
+    <nav>
+        <a href="{{ url_for('main.my_requests') }}">Back to My Requests</a>
+    </nav>
+
+    <div class="form-stepper">
+        <!-- Step 1: Static Content -->
+        <div id="step1" class="step active">
+            <h2>Step 1: Form Information</h2>
+            <h3>Static Content</h3>
+            <pre>{{ form_template.static_content if form_template.static_content else "No static content provided." }}</pre>
+
+            {% if form_template.appendix_content %}
+            <h3>Appendix</h3>
+            <pre>{{ form_template.appendix_content }}</pre>
+            {% endif %}
+
+            <div class="step-navigation">
+                <button type="button" onclick="navigateToStep(2)">Next</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Questionnaire -->
+        <div id="step2" class="step">
+            <h2>Step 2: Questionnaire</h2>
+            {# Action points to the current URL, which will be handled by the POST part of fill_compliance_form route #}
+            <form id="complianceForm" method="POST" action="{{ url_for('main.fill_compliance_form', request_id=compliance_request.id) }}" enctype="multipart/form-data">
+                <input type="hidden" name="compliance_request_id" value="{{ compliance_request.id }}">
+
+                {% if questions %}
+                    {% for q in questions %}
+                        <div class="question-item">
+                            <label for="q_{{ q.id }}">{{ q.order }}. {{ q.text }} {% if q.is_mandatory %}<span style="color:red;">*</span>{% endif %}</label>
+
+                            {# Name attributes are q_{q.id} for single answers, or q_{q.id} for multi-value (like checkbox group, multi-select) #}
+                            {% if q.question_type == QuestionType.TEXT_INPUT %}
+                                <textarea id="q_{{ q.id }}" name="q_{{ q.id }}" rows="3" {% if q.is_mandatory %}required{% endif %}></textarea>
+
+                            {% elif q.question_type == QuestionType.RADIO %}
+                                <div class="options-group">
+                                {% for option in q.options %}
+                                    <label><input type="radio" name="q_{{ q.id }}" value="{{ option }}" {% if q.is_mandatory %}required{% endif %}> {{ option }}</label>
+                                {% endfor %}
+                                </div>
+
+                            {% elif q.question_type == QuestionType.CHECKBOX %}
+                                <div class="options-group">
+                                {% for option in q.options %}
+                                     {# For checkboxes, each option has the same name. Backend gets a list of selected values. #}
+                                    <label><input type="checkbox" name="q_{{ q.id }}" value="{{ option }}"> {{ option }}</label>
+                                {% endfor %}
+                                </div>
+
+                            {% elif q.question_type == QuestionType.DROPDOWN %}
+                                <select id="q_{{ q.id }}" name="q_{{ q.id }}" {% if q.is_mandatory %}required{% endif %}>
+                                    <option value="">-- Select an option --</option>
+                                    {% for option in q.options %}
+                                    <option value="{{ option }}">{{ option }}</option>
+                                    {% endfor %}
+                                </select>
+
+                            {% elif q.question_type == QuestionType.MULTI_SELECT_COMBO %}
+                                <select id="q_{{ q.id }}" name="q_{{ q.id }}" multiple {% if q.is_mandatory %}required{% endif %} size="{{ q.options|length|min(5) }}">
+                                    {% for option in q.options %}
+                                    <option value="{{ option }}">{{ option }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small>Hold Ctrl/Cmd to select multiple options.</small>
+
+                            {% elif q.question_type == QuestionType.FILE_UPLOAD %}
+                                <input type="file" id="q_{{ q.id }}" name="q_{{ q.id }}" {% if q.is_mandatory %}required{% endif %}>
+
+                            {% else %}
+                                <p>Unsupported question type: {{ q.question_type.value }}</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No questions found for this form template.</p>
+                {% endif %}
+
+                <div class="step-navigation">
+                    <button type="button" onclick="navigateToStep(1)">Previous</button>
+                    <button type="submit">Submit Form</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        const steps = document.querySelectorAll('.step');
+
+        function showStep(stepNumber) {
+            steps.forEach(step => step.classList.remove('active'));
+            document.getElementById('step' + stepNumber).classList.add('active');
+            currentStep = stepNumber;
+        }
+
+        function navigateToStep(stepNumber) {
+            // Basic validation placeholder: could check if all questions on current step are answered before proceeding from step 2
+            showStep(stepNumber);
+        }
+
+        // Initialize first step
+        showStep(1);
+    </script>
+
+</body>
+</html>

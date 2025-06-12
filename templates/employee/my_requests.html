@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Compliance Requests</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .filter-form { margin-bottom: 20px; padding: 15px; border: 1px solid #eee; background-color: #f9f9f9; }
+        .filter-form select, .filter-form input[type="text"], .filter-form input[type="submit"] { margin-right: 10px; padding: 8px; }
+    </style>
+</head>
+<body>
+    <h1>My Compliance Requests</h1>
+    <nav>
+        <a href="{{ url_for('main.index') }}">Home</a>
+        {# Add other relevant navigation links if any #}
+    </nav>
+
+    {# Display flashed messages #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="flashes">
+            {% for category, message in messages %}
+                <li class="{{ category }}">{{ message }}</li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
+    <div class="filter-form">
+        <form method="GET" action="{{ url_for('main.my_requests') }}">
+            <label for="status">Status:</label>
+            <select id="status" name="status">
+                <option value="">All</option>
+                {% for s_name in all_statuses %}
+                    <option value="{{ s_name }}" {% if current_filters.status == s_name %}selected{% endif %}>{{ s_name.replace('_', ' ') | title }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="client_id">Client:</label>
+            <select id="client_id" name="client_id">
+                <option value="">All</option>
+                {% for client_id, client_name in clients_for_filter.items() %}
+                    <option value="{{ client_id }}" {% if current_filters.client_id == client_id|string %}selected{% endif %}>{{ client_name }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="project_id">Project ID:</label>
+            {# Using a dropdown for projects found in user's requests. Could be text input too. #}
+            <select id="project_id" name="project_id">
+                <option value="">All</option>
+                {% for proj_id in project_ids_for_filter %}
+                     <option value="{{ proj_id }}" {% if current_filters.project_id == proj_id %}selected{% endif %}>{{ proj_id }}</option>
+                {% endfor %}
+            </select>
+
+            <input type="submit" value="Filter">
+            <a href="{{ url_for('main.my_requests') }}">Clear Filters</a>
+        </form>
+    </div>
+
+    {% if requests and requests|length > 0 %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Request ID</th>
+                    <th>Form Name</th>
+                    <th>Client</th>
+                    <th>Project</th>
+                    <th>Status</th>
+                    <th>Request Sent</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in requests | sort(attribute='request_sent_date', reverse=true) %}
+                <tr>
+                    <td>{{ req.id }}</td>
+                    <td>{{ template_names.get(req.form_template_id, 'Unknown Form') }}</td>
+                    <td>{{ clients_for_filter.get(req.client_id, 'Unknown Client') }}</td>
+                    <td>{{ req.project_id }}</td>
+                    <td>{{ req.status.value if req.status else 'N/A' }}</td>
+                    <td>{{ req.request_sent_date.strftime('%Y-%m-%d %H:%M') if req.request_sent_date else 'N/A' }}</td>
+                    <td>
+                        {% if req.status == 'PENDING' or req.status.value == 'PENDING' %}
+                            <a href="{{ url_for('main.fill_compliance_form', request_id=req.id) }}">Open Form</a>
+                        {% elif req.status == 'COMPLETED' or req.status.value == 'COMPLETED' %}
+                            <a href="#">View PDF</a> {# Placeholder #}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No compliance requests match your current filters. Try <a href="{{ url_for('main.my_requests') }}">clearing filters</a> or check back later.</p>
+    {% endif %}
+</body>
+</html>

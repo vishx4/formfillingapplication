@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Compliant Request Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 0.9em; }
+        th { background-color: #f2f2f2; }
+        .filter-form { margin-bottom: 20px; padding: 15px; border: 1px solid #eee; background-color: #f9f9f9; }
+        .filter-form select, .filter-form input[type="text"], .filter-form input[type="submit"] { margin-right: 10px; padding: 8px; font-size:0.9em; }
+    </style>
+</head>
+<body>
+    <h1>Compliant Request Tracker</h1>
+    <nav>
+        <a href="{{ url_for('main.index') }}">Home</a>
+        {# Add other relevant admin navigation links if any #}
+    </nav>
+
+    {# Display flashed messages - e.g., if a filter is invalid #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="flashes">
+            {% for category, message in messages %}
+                <li class="{{ category }}">{{ message }}</li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
+    <div class="filter-form">
+        <form method="GET" action="{{ url_for('main.compliant_request_tracker_report') }}">
+            <label for="status">Status:</label>
+            <select id="status" name="status">
+                <option value="">All</option>
+                {% for s_name in all_statuses %}
+                    <option value="{{ s_name }}" {% if current_filters.status == s_name %}selected{% endif %}>{{ s_name.replace('_', ' ') | title }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="client_id">Client:</label>
+            <select id="client_id" name="client_id">
+                <option value="">All</option>
+                {# Use dictsort: 0 for key, 1 for value. Sorting by client name (value). #}
+                {% for client_id, client_name in clients_for_filter.items()|dictsort(case_sensitive=False, by='value') %}
+                    <option value="{{ client_id }}" {% if current_filters.client_id == client_id|string %}selected{% endif %}>{{ client_name }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="project_id">Project ID:</label>
+            <select id="project_id" name="project_id">
+                <option value="">All</option>
+                {% for proj_id in project_ids_for_filter|sort(case_sensitive=False) %}
+                     <option value="{{ proj_id }}" {% if current_filters.project_id == proj_id %}selected{% endif %}>{{ proj_id }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="employee_id">Employee:</label>
+            <select id="employee_id" name="employee_id">
+                <option value="">All</option>
+                {# Sorting by employee name (value). #}
+                {% for emp_id, emp_name in employees_for_filter.items()|dictsort(case_sensitive=False, by='value') %}
+                     <option value="{{ emp_id }}" {% if current_filters.employee_id == emp_id|string %}selected{% endif %}>{{ emp_name }} (ID: {{ emp_id }})</option>
+                {% endfor %}
+            </select>
+
+            <input type="submit" value="Filter">
+            <a href="{{ url_for('main.compliant_request_tracker_report') }}" class="button-secondary">Clear Filters</a>
+            {# Construct CSV export link with current filters #}
+            <a href="{{ url_for('main.export_compliant_request_tracker_csv', status=current_filters.status, client_id=current_filters.client_id, project_id=current_filters.project_id, employee_id=current_filters.employee_id) }}" class="button" style="margin-left: 15px;">Export to CSV</a>
+        </form>
+    </div>
+
+    {% if report_data and report_data|length > 0 %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Req. ID</th>
+                    <th>Employee</th>
+                    <th>Form Name</th>
+                    <th>Client</th>
+                    <th>Project ID</th>
+                    <th>Status</th>
+                    <th>Sent Date</th>
+                    <th>Completion Date</th>
+                    <th>Days Pending</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {# Sorting by request_sent_date descending for default view #}
+                {% for item in report_data | sort(attribute='request.request_sent_date', reverse=true) %}
+                <tr>
+                    <td>{{ item.request.id }}</td>
+                    <td>{{ item.employee_name }}</td>
+                    <td>{{ item.form_template_name }} (v{{ item.form_template_version }})</td>
+                    <td>{{ item.client_name }}</td>
+                    <td>{{ item.request.project_id }}</td>
+                    <td>{{ item.request.status.value if item.request.status else 'N/A' }}</td>
+                    <td>{{ item.request.request_sent_date.strftime('%Y-%m-%d %H:%M') if item.request.request_sent_date else 'N/A' }}</td>
+                    <td>{{ item.request.completion_date.strftime('%Y-%m-%d %H:%M') if item.request.completion_date else 'N/A' }}</td>
+                    <td>
+                        {% if item.days_pending is not none %}
+                            {{ item.days_pending }} day(s)
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.request.status == 'PENDING' or item.request.status.value == 'PENDING' %}
+                            <form method="POST" action="{{ url_for('main.cancel_compliance_request', request_id=item.request.id, **request.args) }}" style="display: inline-block; margin-right: 5px;">
+                                <input type="submit" value="Cancel" class="button-small button-warning" onclick="return confirm('Are you sure you want to cancel this request (ID: {{ item.request.id }})?');">
+                            </form>
+                            <form method="POST" action="{{ url_for('main.close_compliance_request', request_id=item.request.id, **request.args) }}" style="display: inline-block;">
+                                <input type="submit" value="Mark Closed" class="button-small" onclick="return confirm('Are you sure you want to mark this request (ID: {{ item.request.id }}) as closed?');">
+                            </form>
+                        {% else %}
+                            <a href="#">View Details</a> {# Placeholder for viewing completed/cancelled/closed forms #}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No compliance requests match your current filters. Try <a href="{{ url_for('main.compliant_request_tracker_report') }}">clearing filters</a>.</p>
+    {% endif %}
+</body>
+</html>

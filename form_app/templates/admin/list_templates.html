@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Form Templates</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Form Templates</h1>
+    <nav>
+        <a href="{{ url_for('main.index') }}">Home</a> |
+        <a href="{{ url_for('main.create_template') }}">Create New Template</a>
+    </nav>
+    {% if templates %}
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Version</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for template in templates %}
+                <tr>
+                    <td>{{ template.id }}</td>
+                    <td>{{ template.name }}</td>
+                    <td>{{ template.version }}</td>
+                    <td>{{ template.status.value }}</td>
+                    <td>{{ template.created_at.strftime('%Y-%m-%d %H:%M:%S') if template.created_at else 'N/A' }}</td>
+                    <td>
+                        <a href="#">View</a> {# Placeholder for actual view page #}
+                        {% if template.status == FormTemplateStatus.DRAFT %}
+                            | <a href="{{ url_for('main.edit_template', template_id=template.id) }}">Edit</a>
+                        {% else %}
+                            | <span style="color: grey;">Edit (Locked)</span>
+                        {% endif %}
+                        {# Clone Button/Form #}
+                        {% if template.status == FormTemplateStatus.PUBLISHED or template.status == FormTemplateStatus.ARCHIVED %}
+                            | <form method="POST" action="{{ url_for('main.clone_template', source_template_id=template.id) }}" style="display: inline;">
+                                <input type="submit" value="Clone" onclick="return confirm('Cloning this template will archive any existing DRAFT. Are you sure?');">
+                              </form>
+                        {% else %}
+                            | <span style="color: grey;">Clone (Unavailable)</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No form templates found. <a href="{{ url_for('main.create_template') }}">Create one now!</a></p>
+    {% endif %}
+</body>
+</html>

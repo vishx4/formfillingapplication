@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Trigger Compliance Job</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Trigger Compliance Form Job</h1>
+    <nav>
+        <a href="{{ url_for('main.index') }}">Home</a> |
+        <a href="{{ url_for('main.list_compliance_requests') }}">View Compliance Requests</a>
+    </nav>
+
+    <p>Manually run the compliance form trigger job. This job will identify relevant timesheet entries and create compliance requests for employees as needed.</p>
+
+    <form method="POST" action="{{ url_for('main.trigger_compliance_job_route') }}">
+        <input type="submit" value="Run Job Now" class="button-primary">
+    </form>
+
+    {# Display flashed messages #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="flashes" style="list-style-type: none; padding-left: 0; margin-top: 20px;">
+            {% for category, message in messages %}
+                <li class="{{ category }}" style="border: 1px solid #ccc; padding: 10px; margin-bottom: 5px; border-left-width: 5px; border-left-color: {% if category == 'error' %}red{% elif category == 'success' %}green{% elif category == 'warning' %}orange{% else %}blue{% endif %};">
+                    {{ message }}
+                </li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+</body>
+</html>

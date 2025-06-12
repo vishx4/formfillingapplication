@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Form App</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Welcome to the Form App</h1>
+    {% if current_user %}
+        <p>Hello, {{ current_user.username }}! Your role is: {{ current_user.role.value }}</p>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('main.index') }}">Home</a></li>
+                <li><a href="{{ url_for('main.my_requests') }}">My Compliance Requests</a></li>
+
+                {% if current_user.role.value == 'admin' or current_user.role.value == 'super_admin' %}
+                    <li style="margin-top: 10px; font-weight: bold;">Admin Menu:</li>
+                    <li><a href="{{ url_for('main.list_templates') }}">Manage Form Templates</a></li>
+                    <li><a href="{{ url_for('main.create_template') }}">Create New Form Template</a></li>
+                    <li style="margin-top: 10px; font-weight: bold;">Jobs & Logs:</li>
+                    <li><a href="{{ url_for('main.trigger_compliance_job_route') }}">Trigger Compliance Job</a></li>
+                    <li><a href="{{ url_for('main.list_compliance_requests') }}">View All Compliance Requests</a></li>
+                    <li><a href="{{ url_for('main.list_email_logs') }}">View Email Logs</a></li>
+                    <li style="margin-top: 10px; font-weight: bold;">Admin Reports:</li>
+                    <li><a href="{{ url_for('main.compliant_request_tracker_report') }}">Compliant Request Tracker</a></li>
+                {% endif %}
+                {# Super admin specific links can be added similarly if needed #}
+                <li><a href="{{ url_for('main.logout') }}" style="margin-top:10px; color:red;">Logout</a></li>
+            </ul>
+        </nav>
+    {% else %}
+        <p>Please <a href="{{ url_for('main.login') }}">log in</a> to access the application.</p>
+    {% endif %}
+</body>
+</html>
